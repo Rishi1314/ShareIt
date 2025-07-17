@@ -10,5 +10,4 @@ export default function Dashboard() {
     if (!user) router.push('/');
   }, [user]);
 
-  return user ? <h1>Welcome, {user.email}</h1> : <p>Redirecting...</p>;
-}
+return user === null ? <p>Checking login status...</p> : <h1>Welcome, {user.email}</h1>;}
