@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
+  
+  if (loading) return null; // or <SkeletonNav />
 
   return (
     <nav className="flex justify-between items-center px-6 py-4 bg-gray-900 text-white">
@@ -22,7 +24,7 @@ export default function Navbar() {
           </div>
         ) : (
           <Link
-            href="http://localhost:5000/auth/google"
+            href="/"
             className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
           >
             Login

@@ -20,3 +20,13 @@ model User {
   googleId  String   @unique
   createdAt DateTime @default(now())
 }
+
+model File {
+  id        String   @id @default(uuid())
+  label     String
+  type      String
+  cid       String?
+  url       String?
+  uploadedBy String
+  createdAt DateTime @default(now())
+}
