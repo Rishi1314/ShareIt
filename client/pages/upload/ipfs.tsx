@@ -3,8 +3,8 @@ import { withAuth } from '@/hoc/withAuth';
 import { useAuth } from '@/context/AuthContext';
 
 function UploadToIPFS() {
-  const user = useAuth();
-    console.log('Upload user:', user);
+  const { user } = useAuth();
+  console.log('Upload user:', user);
 
   const [formData, setFormData] = useState({
     alias: '',
@@ -28,10 +28,10 @@ function UploadToIPFS() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md bg-white shadow-lg rounded-lg p-6 space-y-6"
+        className="w-full max-w-md sm:max-w-lg md:max-w-xl space-y-6 p-6 rounded-lg shadow-lg bg-gray-700"
       >
         <h2 className="text-2xl font-bold text-center">Upload File to IPFS</h2>
 
@@ -57,7 +57,7 @@ function UploadToIPFS() {
             name="file"
             required
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded px-3 py-2 bg-white"
+            className="w-full border border-gray-300 rounded px-3 py-2 cursor-pointer"
           />
         </div>
 
