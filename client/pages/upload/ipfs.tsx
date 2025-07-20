@@ -21,9 +21,18 @@ function UploadToIPFS() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit =async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Uploading to IPFS:', formData);
+    try {
+      console.log('Form data before upload:', formData);
+      return
+    } catch (error) {
+      console.error('Error uploading to IPFS:', error);
+      alert('Failed to upload file. Please try again.');
+      return;
+      
+    }
     // Implement upload logic here
   };
 
