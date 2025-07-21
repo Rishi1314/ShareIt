@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import { withAuth } from '@/hoc/withAuth';
 import { useAuth } from '@/context/AuthContext';
 
@@ -21,19 +22,40 @@ function UploadToIPFS() {
     }
   };
 
-  const handleSubmit =async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Uploading to IPFS:', formData);
-    try {
-      console.log('Form data before upload:', formData);
-      return
-    } catch (error) {
-      console.error('Error uploading to IPFS:', error);
-      alert('Failed to upload file. Please try again.');
+
+    if (!formData.alias || !formData.file) {
+      alert('Alias and file are required.');
       return;
-      
     }
-    // Implement upload logic here
+
+    try {
+      const data = new FormData();
+      data.append('alias', formData.alias);
+      data.append('file', formData.file);
+      if (formData.password) {
+        data.append('password', formData.password);
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:5000/upload/ipfs',
+        data,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            // 'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      console.log('Upload success:', response.data);
+      alert(`✅ File uploaded successfully!\nCID: ${response.data.cid}`);
+    } catch (error: any) {
+      console.error('Error uploading to IPFS:', error);
+      alert(error?.response?.data?.error || 'Failed to upload. Try again.');
+    }
   };
 
   return (
