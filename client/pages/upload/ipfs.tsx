@@ -31,27 +31,45 @@ function UploadToIPFS() {
     }
 
     try {
+      // const data = new FormData();
+      const JWT = localStorage.getItem('token');
       const data = new FormData();
-      data.append('alias', formData.alias);
-      data.append('file', formData.file);
-      if (formData.password) {
-        data.append('password', formData.password);
-      }
-
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:5000/upload/ipfs',
-        data,
+      data.append("file", formData.file);
+    // data.append("network", "public")
+      
+      const request = await fetch(
+        "https://api.pinata.cloud/pinning/pinFileToIPFS",
         {
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            // 'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+            
           },
+          body: data,
         }
       );
+      const response = await request.json();
+      console.log('Request to Pinata:', response);
+      // data.append('alias', formData.alias);
+      // data.append('file', formData.file);
+      // if (formData.password) {
+      //   data.append('password', formData.password);
+      // }
+      // console.log('Form data to upload:', data);
+      // const token = localStorage.getItem('token');
+      // const response = await axios.post(
+      //   'http://localhost:5000/upload/ipfs',
+      //   data,
+      //   {
+      //     headers: {
+      //       'Authorization': `Bearer ${token}`,
+      //       // 'Content-Type': 'multipart/form-data',
+      //     },
+      //   }
+      // );
 
-      console.log('Upload success:', response.data);
-      alert(`✅ File uploaded successfully!\nCID: ${response.data.cid}`);
+      // console.log('Upload success:', response.data);
+      // alert(`✅ File uploaded successfully!\nCID: ${response.data.cid}`);
     } catch (error: any) {
       console.error('Error uploading to IPFS:', error);
       alert(error?.response?.data?.error || 'Failed to upload. Try again.');
