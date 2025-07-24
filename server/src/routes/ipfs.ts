@@ -88,5 +88,36 @@ router.get('/user-files', authenticateJWT, async (req, res) => {
   }
 });
 
+router.post('/retrieve', authenticateJWT, async (req, res) => {
+  try {
+    const { alias, password } = req.body;
+    const userId = (req as any).user?.id;
+
+    if (!alias || !userId) {
+      return res.status(400).json({ error: 'Alias and user ID required' });
+    }
+
+    const file = await prisma.file.findFirst({
+      where: {
+        uploadedBy: userId,
+        alias: alias,
+      },
+    });
+
+    if (!file) {
+      return res.status(404).json({ error: 'File not found for the given alias' });
+    }
+
+    if (file.password && file.password !== password) {
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+
+    return res.status(200).json({ cid: file.cid });
+  } catch (error) {
+    console.error('Error in /retrieve:', error);
+    return res.status(500).json({ error: 'Failed to retrieve file. Try again.' });
+  }
+});
+
 
 export default router;
