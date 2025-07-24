@@ -124,7 +124,7 @@ function DashboardCard({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-between px-6 py-4 rounded-lg transition duration-300 ${color} shadow-lg hover:scale-[1.02]`}
+      className={`flex cursor-pointer items-center justify-between px-6 py-4 rounded-lg transition duration-300 ${color} shadow-lg hover:scale-[1.02]`}
     >
       <span className="flex items-center gap-2 font-semibold text-lg">{icon} {title}</span>
       <span className="text-xl font-bold">&rarr;</span>
