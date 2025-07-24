@@ -31,11 +31,9 @@ function UploadToIPFS() {
     }
 
     try {
-      // const data = new FormData();
       const JWT = localStorage.getItem('token');
       const data = new FormData();
       data.append("file", formData.file);
-    // data.append("network", "public")
       
       const request = await fetch(
         "https://api.pinata.cloud/pinning/pinFileToIPFS",
@@ -50,26 +48,22 @@ function UploadToIPFS() {
       );
       const response = await request.json();
       console.log('Request to Pinata:', response);
-      // data.append('alias', formData.alias);
-      // data.append('file', formData.file);
-      // if (formData.password) {
-      //   data.append('password', formData.password);
-      // }
-      // console.log('Form data to upload:', data);
-      // const token = localStorage.getItem('token');
-      // const response = await axios.post(
-      //   'http://localhost:5000/upload/ipfs',
-      //   data,
-      //   {
-      //     headers: {
-      //       'Authorization': `Bearer ${token}`,
-      //       // 'Content-Type': 'multipart/form-data',
-      //     },
-      //   }
-      // );
-
-      // console.log('Upload success:', response.data);
-      // alert(`✅ File uploaded successfully!\nCID: ${response.data.cid}`);
+      const apiResonse = await axios.post(
+        'http://localhost:5000/upload/ipfs', {
+          
+          alias: formData.alias,
+          ipfsResponse: JSON.stringify(response),
+          userId: user?.id,
+          password: formData.password,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${JWT}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      console.log('API response:', apiResonse);
+      alert(`✅ File uploaded successfully!\nCID: ${response.IpfsHash}`);
+      setFormData({ alias: '', file: null, password: '' });
     } catch (error: any) {
       console.error('Error uploading to IPFS:', error);
       alert(error?.response?.data?.error || 'Failed to upload. Try again.');

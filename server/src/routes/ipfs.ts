@@ -1,46 +1,72 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticateJWT } from '../middleware/authenticate';
-import { PinataSDK } from "pinata"
-import { log } from 'console';
+import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() }); // Store file in memory buffer
+const prisma = new PrismaClient();
+const upload = multer({ storage: multer.memoryStorage() });
 
-const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT || '',
-  pinataGateway: process.env.PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud',
-})
+router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
+  try {
+    const { alias, password, ipfsResponse } = req.body;
+    const userId = (req as any).user?.id;
 
-router.get('/test', (_, res) => {
-  res.send('IPFS Upload Route');
-});
-
-router.post(
-  '/ipfs',
-  authenticateJWT,
-  upload.single('file'), // 👈 this is the missing piece!
-  async (req, res) => {
-    try {
-      const { alias, password } = req.body;
-      const file = req.file;
-      const userId = (req as any).user?.id;
-      if (!file || !alias || !userId) {
-        return res.status(400).json({ error: 'Alias, file, and user are required.' });
-      }
-            console.log('Upload received:', file);
-       
-      // const upload = await pinata.upload.public.file(file);
-
-          // console.log(upload);
-
-      // Respond with success
-      res.status(200).json({ message: 'File uploaded successfully', alias });
-    } catch (error) {
-      console.error('Error uploading to IPFS:', error);
-      res.status(500).json({ error: 'Failed to upload file. Please try again.' });
+    // Validate required inputs
+    if (!alias || !ipfsResponse || !userId) {
+      return res.status(400).json({ error: 'Alias, IPFS response, and user ID are required.' });
     }
+
+    const parsed = JSON.parse(ipfsResponse);
+
+    // Check: Does the alias already exist for this user?
+    const existingFile = await prisma.file.findFirst({
+      where: {
+        alias,
+        uploadedBy: userId,
+      },
+    });
+
+    if (existingFile) {
+      return res.status(409).json({ error: `Alias "${alias}" already exists. Please choose a different name.` });
+    }
+
+    // Check: Optional - Has this exact CID already been uploaded by this user?
+    const cidCheck = await prisma.file.findFirst({
+      where: {
+        cid: parsed.IpfsHash,
+        uploadedBy: userId,
+      },
+    });
+
+    if (cidCheck) {
+      return res.status(409).json({ error: `File with same content already uploaded (CID: ${parsed.IpfsHash}).` });
+    }
+
+    const newFile = await prisma.file.create({
+      data: {
+        alias: alias.trim(),
+        password: password?.trim() || null,
+        cid: parsed.IpfsHash,
+        pinataId: parsed.ID,
+        pinSize: parsed.PinSize,
+        timestamp: new Date(parsed.Timestamp),
+        fileName: parsed.Name,
+        mimeType: parsed.MimeType,
+        numberOfFiles: parsed.NumberOfFiles,
+        isDuplicate: parsed.isDuplicate ?? false,
+        uploadedBy: userId,
+        url: `https://gateway.pinata.cloud/ipfs/${parsed.IpfsHash}`,
+      },
+    });
+
+    console.log('📦 File uploaded:', newFile);
+    res.status(201).json({ message: '✅ File uploaded and saved!', file: newFile });
+
+  } catch (error) {
+    console.error('❌ Upload error:', error);
+    res.status(500).json({ error: 'Failed to upload file. Please try again.' });
   }
-);
+});
 
 export default router;

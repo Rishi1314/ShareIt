@@ -22,11 +22,18 @@ model User {
 }
 
 model File {
-  id        String   @id @default(uuid())
-  label     String
-  type      String
-  cid       String?
-  url       String?
-  uploadedBy String
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid()) // Unique ID in your DB
+  alias         String               // User-defined alias for the file
+  password      String?              // Optional password to restrict access
+  cid           String               // IPFS CID from Pinata
+  pinataId      String               // ID from Pinata (e.g., response.ID)
+  pinSize       Int                  // File size in bytes
+  timestamp     DateTime             // Timestamp from Pinata
+  fileName      String               // Name of the file (e.g., tempcoverletter.docx)
+  mimeType      String               // MIME type of the uploaded file
+  numberOfFiles Int                  // Usually 1 for single uploads
+  isDuplicate   Boolean              // Whether Pinata marked it as a duplicate
+  uploadedBy    String               // user.id of the uploader
+  url           String?              // Optional: IPFS gateway URL
+  createdAt     DateTime @default(now())
 }
