@@ -69,4 +69,24 @@ router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
   }
 });
 
+router.get('/user-files', authenticateJWT, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID missing' });
+    }
+
+    const files = await prisma.file.findMany({
+      where: { uploadedBy: userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    console.log('📂 User files fetched:', files);
+    res.status(200).json({ files });
+  } catch (error) {
+    console.error('Error fetching user files:', error);
+    res.status(500).json({ error: 'Failed to fetch files' });
+  }
+});
+
+
 export default router;

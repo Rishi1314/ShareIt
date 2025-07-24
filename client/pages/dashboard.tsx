@@ -8,6 +8,7 @@ function Dashboard() {
 
   const goToIPFS = () => router.push('/upload/ipfs');
   const goToNetworkShare = () => router.push('/upload/network');
+  const goToUserFiles = () => router.push('/view/files'); // 👈 New navigation
 
   if (!user) return <p className="text-center mt-10">Checking login status...</p>;
 
@@ -27,6 +28,12 @@ function Dashboard() {
           className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition"
         >
           Share File Over Network
+        </button>
+        <button
+          onClick={goToUserFiles}
+          className="bg-purple-600 text-white px-6 py-3 rounded hover:bg-purple-700 transition"
+        >
+          View Uploaded Files
         </button>
       </div>
     </div>
