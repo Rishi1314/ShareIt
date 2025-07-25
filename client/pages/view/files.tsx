@@ -13,7 +13,7 @@ function UserFilesPage() {
     const fetchFiles = async () => {
       const token = localStorage.getItem('token');
       try {
-        const response = await axios.get('http://localhost:5000/upload/user-files', {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/upload/user-files`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

@@ -45,7 +45,7 @@ function UploadToIPFS() {
 
       const response = await request.json();
       const apiResponse = await axios.post(
-        'http://localhost:5000/upload/ipfs',
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/upload/ipfs`,
         {
           alias: formData.alias,
           ipfsResponse: JSON.stringify(response),

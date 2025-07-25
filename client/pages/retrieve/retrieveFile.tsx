@@ -26,7 +26,7 @@ function RetrievePage() {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        'http://localhost:5000/upload/retrieve',
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/upload/retrieve`,
         { alias, password },
         { headers: { Authorization: `Bearer ${token}` } }
       );
