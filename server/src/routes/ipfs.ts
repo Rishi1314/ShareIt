@@ -7,42 +7,59 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Helper to wrap timers safely
+const safeTime = new Map<string, boolean>();
+function startTimer(label: string) {
+  if (!safeTime.get(label)) {
+    safeTime.set(label, true);
+    console.time(label);
+  }
+}
+function endTimer(label: string) {
+  if (safeTime.get(label)) {
+    console.timeEnd(label);
+    safeTime.set(label, false);
+  }
+}
+
 router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
+  startTimer('⏱️ Total Upload');
+
   try {
     const { alias, password, ipfsResponse } = req.body;
     const userId = (req as any).user?.id;
 
-    // Validate required inputs
     if (!alias || !ipfsResponse || !userId) {
       return res.status(400).json({ error: 'Alias, IPFS response, and user ID are required.' });
     }
 
+    startTimer('⏱️ Parse IPFS');
     const parsed = JSON.parse(ipfsResponse);
+    endTimer('⏱️ Parse IPFS');
 
-    // Check: Does the alias already exist for this user?
+    startTimer('⏱️ Check Alias');
     const existingFile = await prisma.file.findFirst({
-      where: {
-        alias,
-        uploadedBy: userId,
-      },
+      where: { alias, uploadedBy: userId },
+      select: { id: true }, // optimization tip
     });
+    endTimer('⏱️ Check Alias');
 
     if (existingFile) {
-      return res.status(409).json({ error: `Alias "${alias}" already exists. Please choose a different name.` });
+      return res.status(409).json({ error: `Alias "${alias}" already exists.` });
     }
 
-    // Check: Optional - Has this exact CID already been uploaded by this user?
+    startTimer('⏱️ Check CID');
     const cidCheck = await prisma.file.findFirst({
-      where: {
-        cid: parsed.IpfsHash,
-        uploadedBy: userId,
-      },
+      where: { cid: parsed.IpfsHash, uploadedBy: userId },
+      select: { id: true }, // optimization tip
     });
+    endTimer('⏱️ Check CID');
 
     if (cidCheck) {
-      return res.status(409).json({ error: `File with same content already uploaded (CID: ${parsed.IpfsHash}).` });
+      return res.status(409).json({ error: `File with same CID already exists.` });
     }
 
+    startTimer('⏱️ Create Record');
     const newFile = await prisma.file.create({
       data: {
         alias: alias.trim(),
@@ -59,17 +76,20 @@ router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
         url: `https://gateway.pinata.cloud/ipfs/${parsed.IpfsHash}`,
       },
     });
+    endTimer('⏱️ Create Record');
 
-    console.log('📦 File uploaded:', newFile);
-    res.status(201).json({ message: '✅ File uploaded and saved!', file: newFile });
+    endTimer('⏱️ Total Upload');
+    return res.status(201).json({ message: '✅ File uploaded!', file: newFile });
 
   } catch (error) {
     console.error('❌ Upload error:', error);
-    res.status(500).json({ error: 'Failed to upload file. Please try again.' });
+    endTimer('⏱️ Total Upload');
+    return res.status(500).json({ error: 'Upload failed.' });
   }
 });
 
 router.get('/user-files', authenticateJWT, async (req, res) => {
+  startTimer('⏱️ GET /user-files');
   try {
     const userId = (req as any).user?.id;
     if (!userId) {
@@ -80,15 +100,18 @@ router.get('/user-files', authenticateJWT, async (req, res) => {
       where: { uploadedBy: userId },
       orderBy: { createdAt: 'desc' },
     });
-    console.log('📂 User files fetched:', files);
-    res.status(200).json({ files });
+
+    return res.status(200).json({ files });
   } catch (error) {
     console.error('Error fetching user files:', error);
-    res.status(500).json({ error: 'Failed to fetch files' });
+    return res.status(500).json({ error: 'Failed to fetch files' });
+  } finally {
+    endTimer('⏱️ GET /user-files');
   }
 });
 
 router.post('/retrieve', authenticateJWT, async (req, res) => {
+  startTimer('⏱️ POST /retrieve');
   try {
     const { alias, password } = req.body;
     const userId = (req as any).user?.id;
@@ -98,10 +121,7 @@ router.post('/retrieve', authenticateJWT, async (req, res) => {
     }
 
     const file = await prisma.file.findFirst({
-      where: {
-        uploadedBy: userId,
-        alias: alias,
-      },
+      where: { uploadedBy: userId, alias },
     });
 
     if (!file) {
@@ -116,8 +136,9 @@ router.post('/retrieve', authenticateJWT, async (req, res) => {
   } catch (error) {
     console.error('Error in /retrieve:', error);
     return res.status(500).json({ error: 'Failed to retrieve file. Try again.' });
+  } finally {
+    endTimer('⏱️ POST /retrieve');
   }
 });
-
 
 export default router;

@@ -21,7 +21,7 @@ function UserFilesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
-  const filesPerPage = 5;
+  const filesPerPage = 3;
 
   useEffect(() => {
     const fetchFiles = async () => {
