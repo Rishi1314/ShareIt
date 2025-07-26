@@ -14,10 +14,18 @@ export function withAuth<P extends object>(WrappedComponent: ComponentType<P>) {
       }
     }, [user, loading, router]);
 
-    if (loading || !user) {
+    if (loading) {
       return (
         <div className="flex justify-center items-center h-screen text-white">
-          <p className="animate-pulse">🔐 Redirecting to login...</p>
+          <p className="animate-pulse text-lg">⏳ Loading...</p>
+        </div>
+      );
+    }
+
+    if (!user) {
+      return (
+        <div className="flex justify-center items-center h-screen text-white">
+          <p className="animate-pulse text-lg">🔐 Redirecting to login...</p>
         </div>
       );
     }

@@ -14,8 +14,8 @@ function RetrievePage() {
   const [skeleton, setSkeleton] = useState(false);
 
   const handleRetrieve = async () => {
-    if (!alias) {
-      setError('❌ Alias is required');
+    if (!alias.trim()) {
+      setError('❌ File alias is required to proceed.');
       return;
     }
 
@@ -34,10 +34,10 @@ function RetrievePage() {
       if (response.data?.cid) {
         window.open(`https://gateway.pinata.cloud/ipfs/${response.data.cid}`, '_blank');
       } else {
-        setError('❌ File not found or invalid credentials');
+        setError('❌ No file found or the credentials provided are incorrect.');
       }
     } catch (err: any) {
-      setError(err?.response?.data?.error || '❌ File not found or invalid credentials');
+      setError(err?.response?.data?.error || '❌ Retrieval failed. Please check your details.');
     } finally {
       setLoading(false);
       setSkeleton(false);
@@ -45,36 +45,38 @@ function RetrievePage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-8 bg-gray-900 text-white">
-      <div className="w-full max-w-md space-y-6 p-6 rounded-lg shadow-xl bg-gray-800 border border-gray-600">
-        <h2 className="text-3xl font-bold text-center">🔍 Retrieve Your File</h2>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-gray-900 text-white">
+      <div className="w-full max-w-md p-6 rounded-lg shadow-xl bg-gray-800 border border-gray-700 space-y-6">
+        <h2 className="text-3xl font-bold text-center mb-4">🔍 Retrieve Your File</h2>
 
         <div className="space-y-2">
-          <label className="block text-sm font-semibold">🔖 File Alias</label>
+          <label htmlFor="alias" className="block text-sm font-semibold">🔖 File Alias</label>
           <input
+            id="alias"
             type="text"
             value={alias}
             onChange={(e) => setAlias(e.target.value)}
-            className="w-full border border-gray-500 bg-gray-700 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter your file alias"
+            className="w-full border border-gray-600 bg-gray-700 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., project-report-2025"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-semibold">🔐 Password (optional)</label>
+          <label htmlFor="password" className="block text-sm font-semibold">🔐 Password (optional)</label>
           <input
+            id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-500 bg-gray-700 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            placeholder="Optional password"
+            className="w-full border border-gray-600 bg-gray-700 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter password if set"
           />
         </div>
 
         {error && (
-          <p className="text-red-400 bg-red-900 bg-opacity-30 p-2 rounded text-sm mt-2">
+          <div className="text-red-400 bg-red-900 bg-opacity-30 p-2 rounded text-sm">
             {error}
-          </p>
+          </div>
         )}
 
         <button
@@ -84,9 +86,7 @@ function RetrievePage() {
           }`}
           disabled={loading}
         >
-          {loading && (
-            <AiOutlineLoading3Quarters className="animate-spin" size={18} />
-          )}
+          {loading && <AiOutlineLoading3Quarters className="animate-spin" size={18} />}
           {loading ? 'Retrieving...' : 'Retrieve File'}
         </button>
 

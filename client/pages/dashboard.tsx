@@ -75,7 +75,7 @@ function Dashboard() {
     );
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-8 bg-gray-900 text-white">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-gray-900 text-white">
       <h1 className="text-3xl sm:text-4xl font-bold text-center mb-6">
         Welcome, <span className="text-blue-400">{user.email}</span>
       </h1>

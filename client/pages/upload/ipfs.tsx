@@ -72,7 +72,7 @@ function UploadToIPFS() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-8 bg-gray-900 text-white">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-gray-900 text-white">
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-lg space-y-6 p-8 rounded-xl shadow-xl bg-gray-800"
