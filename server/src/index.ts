@@ -27,7 +27,10 @@ app.use(passport.initialize());
 app.get('/', (_, res) => res.send('ShareIt Backend Running'));
 
 app.use('/auth', authRoutes);
-app.use('/upload',ipfsRoutes);
+app.use('/upload', ipfsRoutes)
+
+
+
 
 // DB test route
 

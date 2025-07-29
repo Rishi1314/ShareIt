@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { authenticateJWT } from '../middleware/authenticate';
 import { PrismaClient } from '@prisma/client';
+import redis from '../utils/redis';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -88,20 +89,35 @@ router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
   }
 });
 
+
+
 router.get('/user-files', authenticateJWT, async (req, res) => {
   startTimer('⏱️ GET /user-files');
+
   try {
     const userId = (req as any).user?.id;
     if (!userId) {
       return res.status(400).json({ error: 'User ID missing' });
     }
 
+    const cacheKey = `files:user:${userId}`;
+    const cached = await redis.get(cacheKey);
+
+    if (cached) {
+      console.log('📦 Cache hit!');
+      console.log('📦 Cached files:', JSON.parse(cached));
+      return res.status(200).json({ files: JSON.parse(cached) });
+    }
+
+    console.log('📡 Cache miss. Fetching from DB...');
     const files = await prisma.file.findMany({
       where: { uploadedBy: userId },
       orderBy: { createdAt: 'desc' },
     });
 
+    await redis.set(cacheKey, JSON.stringify(files), 'EX', 600); // cache for 10 minutes
     return res.status(200).json({ files });
+
   } catch (error) {
     console.error('Error fetching user files:', error);
     return res.status(500).json({ error: 'Failed to fetch files' });
