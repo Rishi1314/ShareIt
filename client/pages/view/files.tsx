@@ -28,9 +28,7 @@ function UserFilesPage() {
       const token = localStorage.getItem('token');
       try {
         const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/upload/user-files`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const sorted = sortFiles(response.data.files, sortOrder);
         setFiles(sorted);
@@ -66,6 +64,15 @@ function UserFilesPage() {
     setCurrentPage(1);
   };
 
+  const isPreviewable = (mimeType: string) => {
+    return (
+      mimeType.startsWith('image/') ||
+      mimeType === 'application/pdf' ||
+      mimeType.startsWith('video/') ||
+      mimeType.startsWith('audio/')
+    );
+  };
+
   const indexOfLastFile = currentPage * filesPerPage;
   const indexOfFirstFile = indexOfLastFile - filesPerPage;
   const currentFiles = filteredFiles.slice(indexOfFirstFile, indexOfLastFile);
@@ -77,7 +84,7 @@ function UserFilesPage() {
         <FiFolder size={28} /> Your Uploaded Files
       </h2>
 
-      {/* Search + Sort */}
+      {/* Search and Sort */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <div className="relative w-full sm:w-1/2">
           <FiSearch className="absolute top-3 left-3 text-gray-400" size={20} />
@@ -89,7 +96,6 @@ function UserFilesPage() {
             className="pl-10 pr-4 py-2 rounded bg-gray-700 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
         <select
           value={sortOrder}
           onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
@@ -118,10 +124,7 @@ function UserFilesPage() {
         <>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             {currentFiles.map((file) => (
-              <div
-                key={file.id}
-                className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1"
-              >
+              <div key={file.id} className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
                 <div className="mb-3">
                   <p className="text-sm text-gray-400">📛 Alias</p>
                   <p className="font-semibold text-lg">{file.alias}</p>
@@ -146,6 +149,38 @@ function UserFilesPage() {
                   <p className="text-sm text-gray-400">🔑 CID</p>
                   <p className="text-sm break-words">{file.cid}</p>
                 </div>
+
+                {/* Preview Logic */}
+                {isPreviewable(file.mimeType) && (
+                  <div className="mb-4">
+                    {file.mimeType.startsWith('image/') && (
+                      <img
+                        src={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
+                        alt={file.fileName}
+                        className="w-full max-h-60 object-contain"
+                      />
+                    )}
+                    {file.mimeType === 'application/pdf' && (
+                      <iframe
+                        src={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
+                        title={file.fileName}
+                        className="w-full h-60 rounded"
+                      ></iframe>
+                    )}
+                    {file.mimeType.startsWith('video/') && (
+                      <video controls className="w-full h-60">
+                        <source src={`https://gateway.pinata.cloud/ipfs/${file.cid}`} type={file.mimeType} />
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
+                    {file.mimeType.startsWith('audio/') && (
+                      <audio controls className="w-full">
+                        <source src={`https://gateway.pinata.cloud/ipfs/${file.cid}`} type={file.mimeType} />
+                        Your browser does not support the audio element.
+                      </audio>
+                    )}
+                  </div>
+                )}
 
                 <a
                   href={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
