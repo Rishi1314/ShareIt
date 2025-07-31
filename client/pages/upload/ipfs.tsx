@@ -3,6 +3,8 @@ import axios from 'axios';
 import { withAuth } from '@/hoc/withAuth';
 import { useAuth } from '@/context/AuthContext';
 import { FiUploadCloud } from 'react-icons/fi';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function UploadToIPFS() {
   const { user } = useAuth();
@@ -25,7 +27,7 @@ function UploadToIPFS() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.alias || !formData.file) {
-      alert('Alias and file are required.');
+      toast.warn('📛 Alias and file are required.');
       return;
     }
 
@@ -35,7 +37,7 @@ function UploadToIPFS() {
       const data = new FormData();
       data.append('file', formData.file);
 
-      const request = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
@@ -43,12 +45,16 @@ function UploadToIPFS() {
         body: data,
       });
 
-      const response = await request.json();
-      const apiResponse = await axios.post(
+      const pinataJson = await pinataRes.json();
+      if (!pinataRes.ok || !pinataJson.IpfsHash) {
+        throw new Error('Pinata upload failed');
+      }
+
+      const apiRes = await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/upload/ipfs`,
         {
           alias: formData.alias,
-          ipfsResponse: JSON.stringify(response),
+          ipfsResponse: JSON.stringify(pinataJson),
           userId: user?.id,
           password: formData.password,
         },
@@ -60,12 +66,15 @@ function UploadToIPFS() {
         }
       );
 
-      console.log('Upload success:', apiResponse.data);
-      alert(`✅ File uploaded successfully!\nCID: ${response.IpfsHash}`);
+      toast.success(`✅ File uploaded!\nCID: ${pinataJson.IpfsHash}`);
       setFormData({ alias: '', file: null, password: '' });
+      (document.getElementById('file-input') as HTMLInputElement).value = '';
     } catch (error: any) {
-      console.error('Error uploading to IPFS:', error);
-      alert(error?.response?.data?.error || 'Failed to upload. Try again.');
+      const errMsg =
+        error?.response?.data?.error ||
+        error?.message ||
+        '❌ Failed to upload. Try again.';
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -73,6 +82,7 @@ function UploadToIPFS() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-gray-900 text-white">
+      <ToastContainer />
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-lg space-y-6 p-8 rounded-xl shadow-xl bg-gray-800"
@@ -81,9 +91,10 @@ function UploadToIPFS() {
           <FiUploadCloud size={26} /> Upload File to IPFS
         </h2>
 
-        {/* Alias */}
         <div>
-          <label className="block text-sm font-medium mb-1">File Alias <span className="text-red-400">*</span></label>
+          <label className="block text-sm font-medium mb-1">
+            File Alias <span className="text-red-400">*</span>
+          </label>
           <input
             type="text"
             name="alias"
@@ -91,14 +102,16 @@ function UploadToIPFS() {
             required
             onChange={handleChange}
             className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g. my-pitch-deck"
+            placeholder="e.g. my-project-report"
           />
         </div>
 
-        {/* File */}
         <div>
-          <label className="block text-sm font-medium mb-1">Upload File <span className="text-red-400">*</span></label>
+          <label className="block text-sm font-medium mb-1">
+            Upload File <span className="text-red-400">*</span>
+          </label>
           <input
+            id="file-input"
             type="file"
             name="file"
             required
@@ -107,7 +120,6 @@ function UploadToIPFS() {
           />
         </div>
 
-        {/* Password */}
         <div>
           <label className="block text-sm font-medium mb-1">Password (optional)</label>
           <input
