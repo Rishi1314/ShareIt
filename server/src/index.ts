@@ -15,7 +15,7 @@ app.use(
     origin: `${process.env.CLIENT_URL}`, // frontend
     credentials: true,
   })
-);
+)
 
 // ✅ Body Parsing
 app.use(express.json());
