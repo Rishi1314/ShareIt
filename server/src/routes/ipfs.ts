@@ -8,7 +8,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Helper to wrap timers safely
+// Timer helpers
 const safeTime = new Map<string, boolean>();
 function startTimer(label: string) {
   if (!safeTime.get(label)) {
@@ -23,6 +23,7 @@ function endTimer(label: string) {
   }
 }
 
+// Upload to IPFS route
 router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
   startTimer('⏱️ Total Upload');
 
@@ -34,32 +35,38 @@ router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
       return res.status(400).json({ error: 'Alias, IPFS response, and user ID are required.' });
     }
 
+    // Parse IPFS response
     startTimer('⏱️ Parse IPFS');
     const parsed = JSON.parse(ipfsResponse);
     endTimer('⏱️ Parse IPFS');
 
+    // Check for duplicate alias
     startTimer('⏱️ Check Alias');
     const existingFile = await prisma.file.findFirst({
       where: { alias, uploadedBy: userId },
-      select: { id: true }, // optimization tip
+      select: { id: true },
     });
     endTimer('⏱️ Check Alias');
 
     if (existingFile) {
+      console.log("Existing File with same alias");
       return res.status(409).json({ error: `Alias "${alias}" already exists.` });
     }
 
+    // Check for duplicate CID
     startTimer('⏱️ Check CID');
     const cidCheck = await prisma.file.findFirst({
       where: { cid: parsed.IpfsHash, uploadedBy: userId },
-      select: { id: true }, // optimization tip
+      select: { id: true },
     });
     endTimer('⏱️ Check CID');
 
     if (cidCheck) {
+      console.log(" Same CID already uploaded")
       return res.status(409).json({ error: `File with same CID already exists.` });
     }
 
+    // Create new record in DB
     startTimer('⏱️ Create Record');
     const newFile = await prisma.file.create({
       data: {
@@ -76,8 +83,30 @@ router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
         uploadedBy: userId,
         url: `https://gateway.pinata.cloud/ipfs/${parsed.IpfsHash}`,
       },
+      select: {
+        id: true,
+        alias: true,
+        cid: true,
+        fileName: true,
+        mimeType: true,
+        pinSize: true,
+        createdAt: true, // 👈 Make sure createdAt is included
+      },
     });
     endTimer('⏱️ Create Record');
+
+    // ✅ Update Redis Cache incrementally
+    const cacheKey = `files:user:${userId}`;
+    const cached = await redis.get(cacheKey);
+
+    if (cached) {
+      console.log('📦 Cache hit! Updating...');
+      const files = JSON.parse(cached);
+      const updatedFiles = [newFile, ...files].slice(0, 100); // Keep recent 100 if needed
+      await redis.set(cacheKey, JSON.stringify(updatedFiles), 'EX', 600); // 10 min TTL
+    } else {
+      await redis.set(cacheKey, JSON.stringify([newFile]), 'EX', 600);
+    }
 
     endTimer('⏱️ Total Upload');
     return res.status(201).json({ message: '✅ File uploaded!', file: newFile });
@@ -89,8 +118,7 @@ router.post('/ipfs', authenticateJWT, upload.none(), async (req, res) => {
   }
 });
 
-
-
+// Get user files route
 router.get('/user-files', authenticateJWT, async (req, res) => {
   startTimer('⏱️ GET /user-files');
 
@@ -105,7 +133,6 @@ router.get('/user-files', authenticateJWT, async (req, res) => {
 
     if (cached) {
       console.log('📦 Cache hit!');
-      console.log('📦 Cached files:', JSON.parse(cached));
       return res.status(200).json({ files: JSON.parse(cached) });
     }
 
@@ -113,9 +140,18 @@ router.get('/user-files', authenticateJWT, async (req, res) => {
     const files = await prisma.file.findMany({
       where: { uploadedBy: userId },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        alias: true,
+        cid: true,
+        fileName: true,
+        mimeType: true,
+        pinSize: true,
+        createdAt: true, // Ensure it's returned
+      },
     });
 
-    await redis.set(cacheKey, JSON.stringify(files), 'EX', 600); // cache for 10 minutes
+    await redis.set(cacheKey, JSON.stringify(files), 'EX', 600);
     return res.status(200).json({ files });
 
   } catch (error) {
@@ -126,8 +162,10 @@ router.get('/user-files', authenticateJWT, async (req, res) => {
   }
 });
 
+// Retrieve file by alias
 router.post('/retrieve', authenticateJWT, async (req, res) => {
   startTimer('⏱️ POST /retrieve');
+
   try {
     const { alias, password } = req.body;
     const userId = (req as any).user?.id;

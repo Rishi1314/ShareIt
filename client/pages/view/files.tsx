@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { withAuth } from '@/hoc/withAuth';
 import { useAuth } from '@/context/AuthContext';
-import { FiFolder, FiLink, FiSearch, FiCopy } from 'react-icons/fi';
-import { toast } from 'react-toastify';
+import { FiFolder, FiSearch, FiCopy } from 'react-icons/fi';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface FileData {
   id: number;
@@ -46,8 +47,7 @@ function UserFilesPage() {
         setFiles(sorted);
         setFilteredFiles(sorted);
       } catch (error) {
-        console.error('Failed to fetch files:', error);
-        alert('Error fetching uploaded files');
+        toast.error('Error fetching uploaded files');
       } finally {
         setLoading(false);
       }
@@ -81,7 +81,7 @@ function UserFilesPage() {
 
   const handleCopy = (cid: string) => {
     navigator.clipboard.writeText(`https://gateway.pinata.cloud/ipfs/${cid}`);
-    toast.success('🔗 IPFS link copied!');
+    toast.success('🔗 IPFS link copied to clipboard!');
   };
 
   const indexOfLastFile = currentPage * filesPerPage;
@@ -91,6 +91,7 @@ function UserFilesPage() {
 
   return (
     <div className="min-h-screen px-4 py-10 bg-gradient-to-br from-[#0f0f0f] to-[#1a1a1a] text-white">
+      <ToastContainer />
       <h2 className="text-3xl font-bold text-center mb-6 flex justify-center items-center gap-2">
         <FiFolder size={28} /> Your Uploaded Files
       </h2>
@@ -134,15 +135,13 @@ function UserFilesPage() {
                 key={file.id}
                 className="relative bg-[#0f0f0f]/60 border border-gray-800 backdrop-blur-md p-5 rounded-xl transition hover:shadow-lg"
               >
-                {/* Copy Button */}
                 <button
-                  className="absolute top-3 right-4 text-blue-400 hover:text-blue-600 text-sm"
+                  className="absolute cursor-pointer top-3 right-4 text-blue-400 hover:text-blue-600 text-sm"
                   onClick={() => handleCopy(file.cid)}
                 >
                   <FiCopy className="inline-block mr-1" /> Copy Link
                 </button>
 
-                {/* Metadata Grid */}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300 mb-4">
                   <div className="col-span-2 text-white font-medium">📛 Alias</div>
                   <div className="col-span-2 text-white">{file.alias}</div>
@@ -160,7 +159,6 @@ function UserFilesPage() {
                   <div>{new Date(file.createdAt).toLocaleString()}</div>
                 </div>
 
-                {/* Preview */}
                 {isPreviewable(file.mimeType) && (
                   file.mimeType === 'application/pdf' ? (
                     <iframe
@@ -178,7 +176,6 @@ function UserFilesPage() {
                   )
                 )}
 
-                {/* View Button */}
                 <a
                   href={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
                   target="_blank"
@@ -196,7 +193,7 @@ function UserFilesPage() {
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((prev) => prev - 1)}
-              className="px-4 py-2 bg-gray-800 rounded disabled:opacity-50"
+              className="px-4 py-2 cursor-pointer bg-gray-800 rounded disabled:opacity-50"
             >
               ⬅ Prev
             </button>
@@ -206,7 +203,7 @@ function UserFilesPage() {
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="px-4 py-2 bg-gray-800 rounded disabled:opacity-50"
+              className="px-4 py-2 cursor-pointer bg-gray-800 rounded disabled:opacity-50"
             >
               Next ➡
             </button>

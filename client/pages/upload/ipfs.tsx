@@ -25,64 +25,121 @@ function UploadToIPFS() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.alias || !formData.file) {
-      toast.warn('📛 Alias and file are required.');
+  e.preventDefault();
+
+  if (!formData.alias || !formData.file) {
+    toast.warn('📛 Alias and file are required.');
+    return;
+  }
+
+  if (formData.alias.length > 50) {
+    toast.warn('⚠️ Alias is too long. Max 50 characters.');
+    return;
+  }
+
+  if (formData.file.size > 50 * 1024 * 1024) {
+    toast.warn('⚠️ File size exceeds 50MB limit.');
+    return;
+  }
+
+  try {
+    setLoading(true);
+    const JWT = localStorage.getItem('token');
+    if (!JWT || !user?.id) {
+      toast.error('🔒 Authentication error. Please re-login.');
       return;
     }
 
-    try {
-      setLoading(true);
-      const JWT = localStorage.getItem('token');
-      const data = new FormData();
-      data.append('file', formData.file);
+    const data = new FormData();
+    data.append('file', formData.file);
 
-      const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
-        },
-        body: data,
-      });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const pinataJson = await pinataRes.json();
-      if (!pinataRes.ok || !pinataJson.IpfsHash) {
-        throw new Error('Pinata upload failed');
-      }
+    const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+      },
+      body: data,
+      signal: controller.signal,
+    });
 
-      const apiRes = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/upload/ipfs`,
-        {
-          alias: formData.alias,
-          ipfsResponse: JSON.stringify(pinataJson),
-          userId: user?.id,
-          password: formData.password,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${JWT}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+    clearTimeout(timeoutId);
 
-      toast.success(`✅ File uploaded!\nCID: ${pinataJson.IpfsHash}`);
-      setFormData({ alias: '', file: null, password: '' });
-      (document.getElementById('file-input') as HTMLInputElement).value = '';
-    } catch (error: any) {
-      const errMsg =
-        error?.response?.data?.error ||
-        error?.message ||
-        '❌ Failed to upload. Try again.';
-      toast.error(errMsg);
-    } finally {
-      setLoading(false);
+    const pinataJson = await pinataRes.json();
+
+    if (!pinataRes.ok || !pinataJson.IpfsHash) {
+      throw new Error(pinataJson.error || 'Pinata upload failed');
     }
-  };
+
+    console.log('✅ Pinata upload successful. Now sending to backend...');
+
+    const apiRes = await axios.post(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/upload/ipfs`,
+      {
+        alias: formData.alias,
+        ipfsResponse: JSON.stringify(pinataJson),
+        password: formData.password,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${JWT}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    toast.success(`✅ File uploaded!\nCID: ${pinataJson.IpfsHash}`);
+    setFormData({ alias: '', file: null, password: '' });
+    (document.getElementById('file-input') as HTMLInputElement).value = '';
+
+  } catch (error: any) {
+    console.error('❌ Upload error:', error);
+
+    if (error.name === 'AbortError') {
+      toast.error('⏱️ Upload timed out. Please try again.');
+      return;
+    }
+
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const msg = error.response?.data?.error;
+      console.log("axios error", error);
+      if (status === 409) {
+        console.log("409 if block")
+        if (msg?.includes('Alias')) {
+          console.log("Alias conflict")
+          toast.error('⚠️ Alias already exists. Try another one.');
+        } else if (msg?.includes('CID')) {
+          toast.warn('🗂️ You’ve already uploaded this file.');
+        } else {
+          toast.error(`⚠️ Conflict: ${msg}`);
+        }
+      } else {
+        toast.error(msg || '❌ Server error. Please retry.');
+      }
+    } else {
+      toast.error(error.message || '❌ Unexpected error occurred.');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-gray-900 text-white">
-      <ToastContainer />
+      <ToastContainer
+        position="top-center"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="dark"
+      />
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-lg space-y-6 p-8 rounded-xl shadow-xl bg-gray-800"
