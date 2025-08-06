@@ -5,6 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import { FiFolder, FiSearch, FiCopy } from 'react-icons/fi';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/router';
 
 interface FileData {
   id: number;
@@ -26,6 +28,7 @@ function formatBytes(bytes: number): string {
 
 function UserFilesPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [files, setFiles] = useState<FileData[]>([]);
   const [filteredFiles, setFilteredFiles] = useState<FileData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +50,7 @@ function UserFilesPage() {
         setFiles(sorted);
         setFilteredFiles(sorted);
       } catch (error) {
-        toast.error('Error fetching uploaded files');
+        toast.error('❌ Error fetching uploaded files');
       } finally {
         setLoading(false);
       }
@@ -56,13 +59,12 @@ function UserFilesPage() {
     fetchFiles();
   }, [sortOrder]);
 
-  const sortFiles = (files: FileData[], order: 'newest' | 'oldest') => {
-    return [...files].sort((a, b) =>
+  const sortFiles = (files: FileData[], order: 'newest' | 'oldest') =>
+    [...files].sort((a, b) =>
       order === 'newest'
         ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
-  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value.toLowerCase();
@@ -81,7 +83,11 @@ function UserFilesPage() {
 
   const handleCopy = (cid: string) => {
     navigator.clipboard.writeText(`https://gateway.pinata.cloud/ipfs/${cid}`);
-    toast.success('🔗 IPFS link copied to clipboard!');
+    toast.success('🔗 IPFS link copied!');
+  };
+
+  const handleRetrieveRedirect = (alias: string) => {
+    router.push(`/retrieve/retrieveFile?alias=${encodeURIComponent(alias)}`);
   };
 
   const indexOfLastFile = currentPage * filesPerPage;
@@ -91,7 +97,7 @@ function UserFilesPage() {
 
   return (
     <div className="min-h-screen px-4 py-10 bg-gradient-to-br from-[#0f0f0f] to-[#1a1a1a] text-white">
-      <ToastContainer />
+      <ToastContainer position="top-center" theme="dark" autoClose={3000} />
       <h2 className="text-3xl font-bold text-center mb-6 flex justify-center items-center gap-2">
         <FiFolder size={28} /> Your Uploaded Files
       </h2>
@@ -121,71 +127,88 @@ function UserFilesPage() {
 
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, idx) => (
+          {[...Array(6)].map((_, idx) => (
             <div key={idx} className="bg-gray-900 p-6 rounded-xl animate-pulse shadow-inner backdrop-blur-lg border border-gray-700" />
           ))}
         </div>
       ) : filteredFiles.length === 0 ? (
-        <p className="text-center text-gray-300 text-lg">🚫 No files match your search.</p>
+        <div className="text-center text-gray-400 py-20">
+          <p className="text-lg">🚫 No files found. Try adjusting your search.</p>
+        </div>
       ) : (
         <>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            {currentFiles.map((file) => (
-              <div
-                key={file.id}
-                className="relative bg-[#0f0f0f]/60 border border-gray-800 backdrop-blur-md p-5 rounded-xl transition hover:shadow-lg"
-              >
-                <button
-                  className="absolute cursor-pointer top-3 right-4 text-blue-400 hover:text-blue-600 text-sm"
-                  onClick={() => handleCopy(file.cid)}
+            <AnimatePresence>
+              {currentFiles.map((file) => (
+                <motion.div
+                  key={file.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="relative bg-[#0f0f0f]/60 border border-gray-800 backdrop-blur-md p-5 rounded-xl hover:shadow-lg hover:scale-[1.02] transition"
                 >
-                  <FiCopy className="inline-block mr-1" /> Copy Link
-                </button>
+                  {/* Copy Button */}
+                  <button
+                    className="absolute cursor-pointer top-3 right-4 text-blue-400 hover:text-blue-600 text-sm"
+                    onClick={() => handleCopy(file.cid)}
+                  >
+                    <FiCopy className="inline-block mr-1" /> Copy Link
+                  </button>
 
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300 mb-4">
-                  <div className="col-span-2 text-white font-medium">📛 Alias</div>
-                  <div className="col-span-2 text-white">{file.alias}</div>
+                  {/* Metadata Grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300 mb-4">
+                    <div className="col-span-2 text-white font-medium">📛 Alias</div>
+                    <div
+                      className="col-span-2 text-blue-400 underline cursor-pointer"
+                      onClick={() => handleRetrieveRedirect(file.alias)}
+                    >
+                      {file.alias}
+                    </div>
 
-                  <div>📝 Filename</div>
-                  <div className="truncate">{file.fileName || 'Unnamed'}</div>
+                    <div>📝 Filename</div>
+                    <div className="truncate">{file.fileName || 'Unnamed'}</div>
 
-                  <div>📂 Type</div>
-                  <div>{file.mimeType}</div>
+                    <div>📂 Type</div>
+                    <div>{file.mimeType}</div>
 
-                  <div>📦 Size</div>
-                  <div>{formatBytes(file.pinSize || 0)}</div>
+                    <div>📦 Size</div>
+                    <div>{formatBytes(file.pinSize || 0)}</div>
 
-                  <div>⏱️ Uploaded</div>
-                  <div>{new Date(file.createdAt).toLocaleString()}</div>
-                </div>
+                    <div>⏱️ Uploaded</div>
+                    <div>{new Date(file.createdAt).toLocaleString()}</div>
+                  </div>
 
-                {isPreviewable(file.mimeType) && (
-                  file.mimeType === 'application/pdf' ? (
-                    <iframe
-                      src={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
-                      title={file.fileName}
-                      className="w-full h-48 rounded mb-3"
-                    />
-                  ) : (
-                    <img
-                      src={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
-                      alt={file.fileName}
-                      loading="lazy"
-                      className="w-full h-48 object-contain rounded mb-3"
-                    />
-                  )
-                )}
+                  {/* Preview */}
+                  {isPreviewable(file.mimeType) && (
+                    file.mimeType === 'application/pdf' ? (
+                      <iframe
+                        src={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
+                        title={file.fileName}
+                        className="w-full h-48 rounded mb-3"
+                      />
+                    ) : (
+                      <img
+                        src={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
+                        alt={file.fileName}
+                        loading="lazy"
+                        className="w-full h-48 object-contain rounded mb-3"
+                      />
+                    )
+                  )}
 
-                <a
-                  href={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-center bg-blue-600 hover:bg-blue-700 transition font-medium py-2 px-4 rounded mt-2"
-                >
-                  🔗 View on IPFS
-                </a>
-              </div>
-            ))}
+                  {/* View Button */}
+                  <a
+                    href={`https://gateway.pinata.cloud/ipfs/${file.cid}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-center bg-blue-600 hover:bg-blue-700 transition font-medium py-2 px-4 rounded mt-2"
+                  >
+                    🔗 View on IPFS
+                  </a>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
           {/* Pagination */}
