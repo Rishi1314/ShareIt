@@ -127,7 +127,7 @@ function UserFilesPage() {
 
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, idx) => (
+          {[...Array(3)].map((_, idx) => (
             <div key={idx} className="bg-gray-900 p-6 rounded-xl animate-pulse shadow-inner backdrop-blur-lg border border-gray-700" />
           ))}
         </div>
@@ -146,7 +146,7 @@ function UserFilesPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
-                  className="relative bg-[#0f0f0f]/60 border border-gray-800 backdrop-blur-md p-5 rounded-xl hover:shadow-lg hover:scale-[1.02] transition"
+                  className="relative max-h-fit bg-[#0f0f0f]/60 border border-gray-800 backdrop-blur-md p-5 rounded-xl hover:shadow-lg hover:scale-[1.02] transition"
                 >
                   {/* Copy Button */}
                   <button
@@ -158,19 +158,31 @@ function UserFilesPage() {
 
                   {/* Metadata Grid */}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300 mb-4">
-                    <div className="col-span-2 text-white font-medium">📛 Alias</div>
-                    <div
+                    {/* <div className="col-span-2 text-white font-medium">📛 Alias</div> */}
+                     <div className=" cursor-pointer col-span-2 flex items-center min-w-0"                       onClick={() => handleRetrieveRedirect(file.alias)}
+>
+                      <span
+                        className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-gray-800/80 border border-gray-700"
+                        title={file.alias}
+                      >
+                        <span className="uppercase">{file.alias }</span>
+              
+                      </span>
+
+            
+                    </div>
+                    {/* <div
                       className="col-span-2 text-blue-400 underline cursor-pointer"
                       onClick={() => handleRetrieveRedirect(file.alias)}
                     >
                       {file.alias}
-                    </div>
+                    </div> */}
 
                     <div>📝 Filename</div>
                     <div className="truncate">{file.fileName || 'Unnamed'}</div>
 
                     <div>📂 Type</div>
-                    <div>{file.mimeType}</div>
+                    <div className="truncate">{file.mimeType}</div>
 
                     <div>📦 Size</div>
                     <div>{formatBytes(file.pinSize || 0)}</div>
