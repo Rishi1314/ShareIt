@@ -130,7 +130,7 @@ NEXT_PUBLIC_BACKEND_URL=
 ## 🧑‍💻 Author
 
 **Rishi Raj**  
-📧 rishirajdj13@gmail.com  
+📧 rishirajprof@gmail.com  
 🌐 [LinkedIn](https://linkedin.com/in/brishiraj)
 
 ---
